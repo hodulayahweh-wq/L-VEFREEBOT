@@ -1,15 +1,14 @@
-from flask import Flask, request
-import random
-import asyncio
-from telegram import Update, Bot, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
-import os
-import json
+# main.py - Render.com uyumlu, Flask'sız, sadece Telegram botu, kanal kontrolü + mesaj silme
 
-app = Flask(__name__)
+import os
+import random
+import re
+import asyncio
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # BOT TOKEN
-TOKEN = "8550316537:AAHn2LZFTx24dzu9Xfc3M-J4AU7fLHQOsTA"
+TOKEN = "8083213548:AAGM1NQ-AzbY_uuQT01nLnGTLx72bDbUTDw"
 
 # ADMIN ID
 ADMIN_ID = 8258235296
@@ -21,21 +20,18 @@ KANAL_LINK = "https://t.me/lordsystemv3"
 # Destek hattı
 DESTEK_HAT = "@LordDestekHat"
 
-# Kart listesi (admin yükleyecek)
+# Kart listesi
 kartlar = []
 kullanilan_kartlar = set()
 
-bot = Bot(token=TOKEN)
-
-# Ultra giriş animasyonu
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     animasyon = [
-        "⚡ L O R D   L I V E   C C   S İ S T E M ⚡",
+        "⚡ LORD LIVE CC SİSTEM AKTİF ⚡",
         f"Hoş geldin {user.first_name} king 👑",
-        "Ultra güçlü mod aktif 🔥",
+        "Ultra güçlü mod çalışıyor 🔥",
         f"Önce {KANAL_USERNAME} kanalına katılman lazım 💢",
-        "Katıldıktan sonra /livecc yaz, 1 tane canlı kart kap 💳"
+        "Katıldıktan sonra /livecc yaz, canlı kart kap 💳"
     ]
 
     mesaj = await update.message.reply_text("Sistem yükleniyor... 🚀")
@@ -43,20 +39,21 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await asyncio.sleep(0.8)
         await mesaj.edit_text(text)
 
-    # Katılım kontrol butonu
     keyboard = [[InlineKeyboardButton("Kanala Katıl 🔥", url=KANAL_LINK)]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("Kanala katılmadan devam edemezsin aşkım 😏\nKatıldıktan sonra tekrar /start yaz.", reply_markup=reply_markup)
 
-# Katılım kontrol + live CC verme
 async def livecc(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    chat_member = await bot.get_chat_member(chat_id=KANAL_USERNAME, user_id=user_id)
-
-    if chat_member.status in ['left', 'kicked']:
-        keyboard = [[InlineKeyboardButton("Kanala Katıl Şimdi 🔥", url=KANAL_LINK)]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(f"{KANAL_USERNAME} kanalına katılmadan live CC alamazsın king’im 😔\nKatıl ve tekrar /livecc yaz.", reply_markup=reply_markup)
+    try:
+        chat_member = await context.bot.get_chat_member(chat_id=KANAL_USERNAME, user_id=user_id)
+        if chat_member.status in ['left', 'kicked']:
+            keyboard = [[InlineKeyboardButton("Kanala Katıl Şimdi 🔥", url=KANAL_LINK)]]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            await update.message.reply_text(f"{KANAL_USERNAME} kanalına katılmadan live CC alamazsın king’im 😔\nKatıl ve tekrar /livecc yaz.", reply_markup=reply_markup)
+            return
+    except:
+        await update.message.reply_text("Kanal kontrolü yapılamadı, lütfen daha sonra dene king’im 😔")
         return
 
     global kartlar, kullanilan_kartlar
@@ -82,9 +79,15 @@ CVV: {cvv}
 
 Ultra güçlü kart, hemen kullan king 👑
 Destek: {DESTEK_HAT}"""
+
     await update.message.reply_text(metin)
 
-# Admin dosya yükleme
+    # Kullanıcının komut mesajını sil (kanalda olmasa da chat'te siler)
+    try:
+        await update.message.delete()
+    except:
+        pass
+
 async def admin_yukle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.effective_user.id != ADMIN_ID:
         await update.message.reply_text("Sadece admin yükleyebilir bebeğim 😏")
